@@ -137,9 +137,19 @@ void simu( int argc, char **argv )
     // Initialize the electric potential and scharge_ave field
     EpotField epot( geom );
     MeshScalarField scharge_ave( geom );
-    
-	// Define magnetic field
+    /*
+	// Option A: No magnetic field present
     MeshVectorField bfield;
+    */
+    // Option B: Define a magnetic field according to file
+    const std::string bfieldfn = "MagB_field_map.dat";
+    
+    bool fout[3] = {true, true, true};
+    MeshVectorField bfield( MODE_3D, fout, 1.0e-3, 1.0, bfieldfn ); //Arguments: mode, enable read, coordinate scaling factor, field scaling factor, data file.
+    field_extrpl_e bfldextrpl[6] = { FIELD_ZERO, FIELD_ZERO, 
+                                     FIELD_ZERO, FIELD_ZERO, 
+                                     FIELD_ZERO, FIELD_ZERO };  //FIELD_ZERO returns zero field for field outside the mesh boundary. FIELD_NAN returns NaN.
+    bfield.set_extrapolation( bfldextrpl );
     
     // Set up the electric field based on the initial electric potential
     EpotEfield efield( epot );

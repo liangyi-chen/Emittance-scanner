@@ -61,7 +61,7 @@ void simu( int argc, char **argv )
 
     MeshScalarField tdens( geom );
     pdb.build_trajectory_density_field( tdens );
-    /*
+    
     GTKPlotter plotter( &argc, &argv );
     plotter.set_geometry( &geom );
     plotter.set_epot( &epot );
@@ -72,16 +72,6 @@ void simu( int argc, char **argv )
     plotter.set_particledatabase( &pdb );
     plotter.new_geometry_plot_window();
     plotter.run();
-    */
-    GeomPlotter gplotter( geom );
-    gplotter.set_size( 1600, 900 );                 // pixels
-    gplotter.set_epot( &epot );                     // equipotential lines (optional)
-    gplotter.set_particle_database( &pdb );         // trajectories (optional)
-    if( bfield )
-        gplotter.set_bfield( bfield );
-    gplotter.set_view_si( VIEW_ZY, 0.0 );           // ZY plane at x = 0 m (beam axis)
-    gplotter.set_ranges( 2.46, -0.01, 2.562, 0.01 );
-    gplotter.plot_png( "zy_view.png" );
 }
 
 
