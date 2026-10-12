@@ -39,7 +39,7 @@ w = f - i0
 kz = np.arange(0, nz, 2)
 z_out = z_u[kz]
 
-fn = OUT + "MagB_field_map.dat"
+fn = OUT + "MagB_field_map.txt"
 Xf = X.T.ravel(); Yf = Y.T.ravel()          # x fastest within each z plane
 with open(fn, "w") as fh:                   # columns: x y z Bx By Bz, no header
     for k in kz:
