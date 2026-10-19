@@ -25,7 +25,7 @@
 using namespace std;
 
 const double Vslit = 0.0;                    // Voltage of the slit 0 V
-const double scanner_z_position = 2608.0e-3;
+const double scanner_z_position = 2900.0e-3;
 double Vplate;                               // set from argv[3] in simu()
 double scanner_y_position;                   // set from argv[2] in simu()
 
@@ -52,7 +52,7 @@ void simu( int argc, char **argv )
     double dz = 1e-3; //mesh resolution along z-axis
     double sizereq[3] = { 400.0e-3, // x axis end to end length
                           400.0e-3, // y axis end to end length
-                          2700.0e-3-start }; // z axis end to end length
+                          3000.0e-3-start }; // z axis end to end length
     Int3D meshsize( (int)floor(sizereq[0]/dx)+1, // number of nodes along x-axis
                     (int)floor(sizereq[1]/dy)+1, // number of nodes along y-axis
                     (int)floor(sizereq[2]/dz)+1 ); // number of nodes along z-axis
@@ -140,7 +140,7 @@ void simu( int argc, char **argv )
     MeshScalarField scharge_ave( geom );
     
     // Define a magnetic field according to file
-    const std::string bfieldfn = "MagB_field_map.txt";
+    const std::string bfieldfn = "MagB_field_map_3.0.txt";
     
     bool fout[3] = {true, true, true};
     MeshVectorField bfield( MODE_3D, fout, 1.0, 1.0, bfieldfn ); //Arguments: mode, enable read, coordinate scaling factor, field scaling factor, data file. If you want no magnetic field, set the field scaling factor to zero.
@@ -148,6 +148,26 @@ void simu( int argc, char **argv )
                                      FIELD_ZERO, FIELD_ZERO, 
                                      FIELD_ZERO, FIELD_ZERO };  //FIELD_ZERO returns zero field for field outside the mesh boundary. FIELD_NAN returns NaN.
     bfield.set_extrapolation( bfldextrpl );
+    
+    // Scale the field inside the scanner (z > scanner entrance):
+    //   1.0 = full field everywhere, 0.0 = no field inside the scanner
+    double bfield_inside_factor = 1.0;
+
+    if( bfield_inside_factor != 1.0 ) {
+        for( uint32_t k = 0; k < bfield.size(2); k++ ) {
+            double z = bfield.origo(2) + bfield.h()*k;      // z of this node in the map's own mesh [m]
+            if( z > scanner_z_position ) {
+                for( uint32_t i = 0; i < bfield.size(0); i++ ) {
+                    for( uint32_t j = 0; j < bfield.size(1); j++ ) {
+                        Vec3D B = bfield( i, j, k );
+                        bfield.set( i, j, k, Vec3D( B[0]*bfield_inside_factor,
+                                                    B[1]*bfield_inside_factor,
+                                                    B[2]*bfield_inside_factor ) );
+                    }
+                }
+            }
+        }
+    }
     
     // Set up the electric field based on the initial electric potential
     EpotEfield efield( epot );
@@ -163,50 +183,49 @@ void simu( int argc, char **argv )
     
     for( size_t vloop = 0; vloop < 10; vloop++ ) {      //Start the Vlasov convergence loop
     
-    // Solve for the electric potential and update the electric field
-    solver.solve( epot, scharge_ave );
-    efield.recalculate();
-    
-    pdb.clear(); 
-    //Load beam from file
-    std::ifstream infile("Triode_4mm_SC_Z2600_no_scraper.txt");
-    if (!infile.is_open()) {
-        std::cerr << "Error: Could not open the particle file!" << std::endl;
-        return; 
-    }
-
-    std::string header;
-    std::getline(infile, header); // Skip the first line containing column labels
-
-    // Temporary variables to store row data
-    double file_I, file_M, file_Q, x, vx, y, vy, z, vz;
-
-    while (infile >> file_I >> file_M >> file_Q >> x >> vx >> y >> vy >> z >> vz) {
+        // Solve for the electric potential and update the electric field
+        solver.solve( epot, scharge_ave );
+        efield.recalculate();
         
-        // 1. Convert physical properties to IBSimu SI units
-        double q = file_Q;    // Already in e
-        double m = file_M;  // Already in amu
-        double I = file_I;             // Already in Amperes
-        
-        // 2. Construct the kinematics trajectory point (Time t = 0.0)
-        ParticleP3D single_particle_path(0.0, x, vx, y, vy, z, vz);
-        
-        // 3. Inject into your ParticleDataBase3D object
-        pdb.add_particle(I, q, m, single_particle_path);
-    }
+        pdb.clear(); 
+        //Load beam from file
+        std::ifstream infile("Triode_4mm_SC_Z2600_no_scraper.txt");
+        if (!infile.is_open()) {
+            std::cerr << "Error: Could not open the particle file!" << std::endl;
+            return; 
+        }
 
-    infile.close();
-	
-	pdb.iterate_trajectories( scharge, efield, bfield );
-    
-    // Apply Localized Space Charge Compensation (80% reduction)
-        // Adjust z_start_comp to where you want neutralization to begin (e.g., past puller/screen)
-        double sc_comp = 0.2;           // Keep 20% charge, eliminate 80%
-        double z_start_comp = 40.0e-3;   // Begins at the Screen electrode Z coordinate
+        std::string header;
+        std::getline(infile, header); // Skip the first line containing column labels
+
+        // Temporary variables to store row data
+        double file_I, file_M, file_Q, x, vx, y, vy, z, vz;
+
+        while (infile >> file_I >> file_M >> file_Q >> x >> vx >> y >> vy >> z >> vz) {
+            
+            // 1. Convert physical properties to IBSimu SI units
+            double q = file_Q;    // Already in e
+            double m = file_M;  // Already in amu
+            double I = file_I * 5;             // Already in Amperes, but data is 80% SC compensated
+            
+            // 2. Construct the kinematics trajectory point (Time t = 0.0)
+            ParticleP3D single_particle_path(0.0, x, vx, y, vy, z, vz);
+            
+            // 3. Inject into your ParticleDataBase3D object
+            pdb.add_particle(I, q, m, single_particle_path);
+        }
+
+        infile.close();
         
+        pdb.iterate_trajectories( scharge, efield, bfield );
+        
+        // Apply Localized Space Charge Compensation (80% reduction)
+        double sc_comp = 0.2;           // 80% SC compensation in free drift space
+        
+        // Only use 80% SC compensation in free drift space (before emittance scanner first slit)
         for( uint32_t k = 0; k < geom.size(2); k++ ) {
             double z = geom.origo(2) + geom.h()*k;
-            if( z > z_start_comp ) {
+            if( z < scanner_z_position ) {
                 for( uint32_t x_node = 0; x_node < geom.size(0); x_node++ ) {
                     for( uint32_t y_node = 0; y_node < geom.size(1); y_node++ ) {
                         scharge(x_node, y_node, k) *= sc_comp;
@@ -214,9 +233,20 @@ void simu( int argc, char **argv )
                 }
             }
         }
-    scharge_ave = scharge;
         
-    cout << "Completed Vlasov Convergence Loop Iteration: " << vloop+1 << endl;
+        //  Use averaging damping for scharge across iterations to help convergence
+        double sc_alpha = 0.5;
+        if( vloop == 0 ) {
+            scharge_ave = scharge;
+        } else {
+            double sc_beta = 1.0-sc_alpha;
+            uint32_t nodecount = scharge.nodecount();
+            for( uint32_t b = 0; b < nodecount; b++ ) {
+                scharge_ave(b) = sc_alpha*scharge(b) + sc_beta*scharge_ave(b);
+            }
+        }
+            
+        cout << "Completed Vlasov Convergence Loop Iteration: " << vloop+1 << endl;
     }
     
     const ParticleStatistics &stat = pdb.get_statistics();

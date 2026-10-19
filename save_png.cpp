@@ -79,7 +79,7 @@ void simu( int argc, char **argv )
     if( bfield )
         gplotter.set_bfield( bfield );
     gplotter.set_view_si( VIEW_ZY, 0.0 );
-    gplotter.set_ranges( 2.46, -0.01, 2.562, 0.01 );
+    gplotter.set_ranges( 2.60, -0.01, 3.000, 0.01 );
     gplotter.plot_png( pngfile.c_str() );
 }
 
