@@ -1,4 +1,5 @@
 #include <fstream>
+#include <sstream>
 #include <iomanip>
 #include <limits>
 #include "epot_bicgstabsolver.hpp"
@@ -17,7 +18,9 @@
 #include "trajectorydiagnostics.hpp"
 #include "particledatabase.hpp"
 #include "particlediagplotter.hpp"
-#include <sstream>
+#include <fstream>
+#include <vector>
+#include "types.hpp"
 
 
 
@@ -25,7 +28,7 @@
 using namespace std;
 
 const double Vslit = 0.0;                    // Voltage of the slit 0 V
-const double scanner_z_position = 2900.0e-3;
+const double scanner_z_position = 2908.0e-3;
 double Vplate;                               // set from argv[3] in simu()
 double scanner_y_position;                   // set from argv[2] in simu()
 
@@ -46,7 +49,7 @@ void simu( int argc, char **argv )
     cout << "Slit y position = " << y_mm << " mm; "
          << "deflector voltage = " << Vplate << " V" << endl;
 
-    double start = 2590.0e-3; // start position along the z-axis
+    double start = 2890.0e-3; // start position along the z-axis
     double dx = 1e-3; //mesh resolution along x-axis
     double dy = 1e-3; //mesh resolution along y-axis
     double dz = 1e-3; //mesh resolution along z-axis
@@ -151,7 +154,7 @@ void simu( int argc, char **argv )
     
     // Scale the field inside the scanner (z > scanner entrance):
     //   1.0 = full field everywhere, 0.0 = no field inside the scanner
-    double bfield_inside_factor = 1.0;
+    double bfield_inside_factor = 30.0;
 
     if( bfield_inside_factor != 1.0 ) {
         for( uint32_t k = 0; k < bfield.size(2); k++ ) {
@@ -189,7 +192,7 @@ void simu( int argc, char **argv )
         
         pdb.clear(); 
         //Load beam from file
-        std::ifstream infile("Triode_4mm_SC_Z2600_no_scraper.txt");
+        std::ifstream infile("Triode_4mm_Z2900_IBSimu_propag_no_scraper.txt");
         if (!infile.is_open()) {
             std::cerr << "Error: Could not open the particle file!" << std::endl;
             return; 
@@ -206,7 +209,7 @@ void simu( int argc, char **argv )
             // 1. Convert physical properties to IBSimu SI units
             double q = file_Q;    // Already in e
             double m = file_M;  // Already in amu
-            double I = file_I * 5;             // Already in Amperes, but data is 80% SC compensated
+            double I = file_I * 1;             // Already in Amperes, but data is 80% SC compensated, so *5 is it is compensated; *1 if it's raw data.
             
             // 2. Construct the kinematics trajectory point (Time t = 0.0)
             ParticleP3D single_particle_path(0.0, x, vx, y, vy, z, vz);
@@ -257,6 +260,7 @@ void simu( int argc, char **argv )
     // Save the electric potential to a file
     epot.save( ("epot_" + tag + ".dat").c_str() );
     pdb.save( ("pdb_" + tag + ".dat").c_str() );
+
 }
 
 

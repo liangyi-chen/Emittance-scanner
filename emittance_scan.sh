@@ -39,7 +39,7 @@ fi
 # (%g, and -0 becomes 0), so "0.3" -> 0.3, "-0.0" -> 0, "100" -> 100
 fmt() { awk -v v="$1" 'BEGIN { x = v + 0; if (x == 0) x = 0; printf "%g", x }'; }
 
-for y in $(seq -1.6 0.2 1.6); do
+for y in $(seq -20 2 20); do
   for V in $(seq -1000 200 1000); do
     ty=$(fmt "$y")
     tv=$(fmt "$V")

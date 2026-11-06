@@ -22,5 +22,11 @@ save_png: save_png.o
 save_png.o: save_png.cpp
 	$(CC) -c -o save_png.o save_png.cpp $(CXXFLAGS)
 
+get_particle_data: get_particle_data.o
+	$(CC) -o get_particle_data.run get_particle_data.o $(LDFLAGS) $(LDLIBS)
+
+get_particle_data.o: get_particle_data.cpp
+	$(CC) -c -o get_particle_data.o get_particle_data.cpp $(CXXFLAGS)
+
 clean:
-	$(RM) *~ *.o simu.run plot.run save_png.run
+	$(RM) *~ *.o simu.run plot.run save_png.run get_particle_data.run
